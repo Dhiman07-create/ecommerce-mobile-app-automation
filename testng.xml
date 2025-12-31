@@ -6,7 +6,7 @@
     </listeners>
     <test name="Regression Tests">
         <classes>
-            <class name="tests."/>
+            <class name="tests.SmokeTest"/>
         </classes>
     </test>
 </suite>
