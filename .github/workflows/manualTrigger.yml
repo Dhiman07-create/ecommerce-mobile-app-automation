@@ -7,7 +7,7 @@ on:
         required: true
         type: string
         default: 1
-      ENV:
+      ENVIRONMENT:
         required: true
         type: choice
         options:
@@ -26,7 +26,7 @@ jobs:
     uses: ./.github/workflows/basePipeline.yml
     with:
       THREADS: ${{ inputs.THREADS }}
-      ENV: ${{ inputs.ENV }}
+      ENVIRONMENT: ${{ inputs.ENVIRONMENT }}
       ALLURE_REPORT_NAME: Ecommerce Mobile App Regression
       ALLURE_REPORT_DEPLOY_FOLDER: Ecommerce_Mobile_App_Regression_Tests
       TEST_SUITE: testng.xml

@@ -72,13 +72,13 @@ jobs:
           fi
           
           sed -E -i 's/thread-count="[0-9]+"/thread-count="${{ inputs.RERUN_FAILED_TESTS_THREADS }}"/g; s/name="Failed suite \[(.*?)\]"/name="\1"/g; s/\(failed\)//g' target/surefire-reports/testng-failed.xml
-          mvn verify -q -Dsurefire.suiteXmlFiles=target/surefire-reports/testng-failed.xml -Denv=${{ inputs.ENV }} -Dselenide.headless=true -s settings.xml
+          mvn verify -q -Dsurefire.suiteXmlFiles=target/surefire-reports/testng-failed.xml -Denv=${{ inputs.ENVIRONMENT }} -Dselenide.headless=true -s settings.xml
         continue-on-error: true
 
       - name: Set Allure env properties
         continue-on-error: true
         run: |
-          echo "env=${{ inputs.ENV }}" >> ./target/allure-results/environment.properties
+          echo "env=${{ inputs.ENVIRONMENT }}" >> ./target/allure-results/environment.properties
           echo "testSuite=${{ inputs.TEST_SUITE }}" >> ./target/allure-results/environment.properties
 
       - name: Checkout gh-pages for history
@@ -102,7 +102,7 @@ jobs:
         with:
           allure-results: ./target/allure-results
           website: gh-pages
-          reports-site-path: ${{ inputs.ENV }}/${{ env.FILENAME }}
+          reports-site-path: ${{ inputs.ENVIRONMENT }}/${{ env.FILENAME }}
           max-reports: 10
 
       - name: Deploy Allure report to GitHub Pages
@@ -213,7 +213,7 @@ jobs:
       - name: Generate Email Body
         id: generate-email-body
         run: |
-          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ inputs.ENV }}/testng/${{ github.run_number }}/"
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ inputs.ENVIRONMENT }}/testng/${{ github.run_number }}/"
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           EMAIL_BODY=$(cat <<'EOF'
@@ -240,7 +240,7 @@ jobs:
                 <p style="font-size: 14px; margin: 5px 0;">❓ <strong>Unknown:</strong> ${{ env.UNKNOWN }}</p>
               </div>
               <div style="flex: 1; margin-bottom: 20px;">           
-                <p style="font-size: 14px; margin: 5px 0;">🌐 <strong>Environment:</strong> ${{ inputs.ENV }}</p>
+                <p style="font-size: 14px; margin: 5px 0;">🌐 <strong>Environment:</strong> ${{ inputs.ENVIRONMENT }}</p>
                 <p style="font-size: 14px; margin: 5px 0;">🧪 <strong>Test Suite:</strong> ${{ inputs.TEST_SUITE }}</p>
                 <p style="font-size: 14px; margin: 5px 0;">⏰ <strong>Execution Datetime:</strong> ${{ env.EXECUTION_DATETIME }}</p>
                 <p style="font-size: 14px; margin: 5px 0;">📝 <strong>Test Duration:</strong> ${{ env.DURATION }}</p>
@@ -312,7 +312,7 @@ jobs:
           BROKEN: ${{ env.BROKEN }}
           TOTAL_SCENARIOS: ${{ env.TOTAL_SCENARIOS }}
           DURATION: ${{ env.DURATION }}
-          ENVIRONMENT: ${{ inputs.ENV }}
+          ENVIRONMENT: ${{ inputs.ENVIRONMENT }}
 
       - name: Send notification email
         continue-on-error: true
