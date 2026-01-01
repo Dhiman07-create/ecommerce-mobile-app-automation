@@ -68,22 +68,6 @@ jobs:
   
           :booted
           echo Emulator booted successfully
-  
-          echo Starting emulator...
-          start "" emulator -avd opencart_emulator -no-window -no-audio -gpu swiftshader_indirect
-          echo Waiting for device...
-          adb wait-for-device
-          echo Waiting for boot completion...
-          adb kill-server
-          adb start-server
-          for /L %%i in (1,1,60) do (
-            adb shell getprop sys.boot_completed | findstr "1" >nul && goto booted
-            timeout /t 5 >nul
-          )
-          echo Emulator failed to boot in time
-          exit /b 1
-          :booted
-          echo Emulator booted successfully
 
       - name: Start Appium Server
         shell: cmd
