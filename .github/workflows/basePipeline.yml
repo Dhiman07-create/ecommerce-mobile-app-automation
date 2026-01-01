@@ -66,39 +66,75 @@ jobs:
             -ArgumentList "-avd opencart_emulator -no-window -no-audio -gpu swiftshader_indirect" `
             -NoNewWindow
           $DEVICE = "emulator-5554"
-          Write-Host "==============================="
-          Write-Host "Waiting for device"
-          Write-Host "==============================="
+          Write-Host "Waiting for device to appear..."
           adb -s $DEVICE wait-for-device
-          Write-Host "==============================="
-          Write-Host "Waiting for boot completion"
-          Write-Host "==============================="
-          $booted = $false
-          for ($i=0; $i -lt 72; $i++) {
-              $status = adb -s $DEVICE shell getprop sys.boot_completed
-              if ($status -match "1") {
-                  $booted = $true
-                  break
+
+          Write-Host "Waiting for Android boot completion..."
+          $booted=$false
+
+          for ($i=0; $i -lt 72; $i++) {   # 72 × 5s = 6 minutes
+              $boot = adb -s $DEVICE shell getprop sys.boot_completed 2>$null
+              if ($boot -match "1") {
+                $booted=$true
+                break
               }
-              Start-Sleep -Seconds 5
+          Start-Sleep -Seconds 5
           }
+
           if (-not $booted) {
-              Write-Error "Emulator failed to boot"
-              adb devices
+              Write-Error "Boot property not set"
               exit 1
           }
-          Write-Host "==============================="
-          Write-Host "Disabling animations"
-          Write-Host "==============================="
+
+          Write-Host "Waiting for Package Manager..."
+          for ($i=0; $i -lt 36; $i++) {
+              adb -s $DEVICE shell pm list packages >$null 2>&1
+              if ($LASTEXITCODE -eq 0) {
+                Write-Host "Package manager ready"
+                break
+          }
+          Start-Sleep -Seconds 5
+          }
+
+          Write-Host "Disabling animations..."
           adb -s $DEVICE shell settings put global window_animation_scale 0
           adb -s $DEVICE shell settings put global transition_animation_scale 0
           adb -s $DEVICE shell settings put global animator_duration_scale 0
-          Write-Host "Emulator is READY"
+
+          Write-Host "Emulator fully ready"
 
       - name: Start Appium Server
-        shell: cmd
+        shell: powershell
         run: |
-          start cmd /k appium --base-path /wd/hub
+          Write-Host "Starting Appium server..."
+
+          Start-Process powershell `
+            -ArgumentList "appium --base-path /wd/hub --log-level info" `
+            -NoNewWindow
+
+          Write-Host "Waiting for Appium to be ready..."
+
+          $appiumReady = $false
+
+          for ($i=0; $i -lt 30; $i++) {   # 30 × 2s = 60s max
+              try {
+                  $res = Invoke-WebRequest `
+                    -Uri http://127.0.0.1:4723/wd/hub/status `
+                    -TimeoutSec 2
+                  if ($res.StatusCode -eq 200) {
+                      $appiumReady = $true
+                      break
+                  }
+              } catch {}
+              Start-Sleep -Seconds 2
+          }
+
+          if (-not $appiumReady) {
+              Write-Error "Appium failed to start"
+              exit 1
+          }
+
+          Write-Host "Appium is ready"
 
       - name: Run Tests
         shell: cmd
