@@ -50,24 +50,66 @@ jobs:
       - name: Start Android Emulator
         shell: cmd
         run: |
+          echo ===============================
+          echo Cleaning up existing emulators
+          echo ===============================
+
+          adb kill-server
+          adb start-server
+
+          for /f "tokens=1" %%i in ('adb devices ^| findstr emulator') do (
+            echo Killing emulator %%i
+            adb -s %%i emu kill
+          )
+
+          echo ===============================
+          echo Starting Android Emulator
+          echo ===============================
+
+          start "" emulator -avd opencart_emulator -no-window -no-audio -gpu swiftshader_indirect
+
           set DEVICE=emulator-5554
-          echo Waiting for device to appear...
+
+          echo ===============================
+          echo Waiting for emulator device
+          echo ===============================
+
           adb -s %DEVICE% wait-for-device
-          echo Waiting for Android to fully boot...
+
+          echo ===============================
+          echo Waiting for boot completion
+          echo ===============================
+
           set BOOTED=false
+
+          REM 72 attempts * 5 seconds = 6 minutes
           for /L %%i in (1,1,72) do (
             adb -s %DEVICE% shell getprop sys.boot_completed > boot.txt
             findstr "1" boot.txt >nul && set BOOTED=true && goto booted
             timeout /t 5 >nul
           )
-  
+
           if "%BOOTED%"=="false" (
             echo Emulator failed to boot in time
+            adb devices
             exit /b 1
           )
-  
+
           :booted
           echo Emulator booted successfully
+
+          echo ===============================
+          echo Disabling animations
+          echo ===============================
+
+          adb -s %DEVICE% shell settings put global window_animation_scale 0
+          adb -s %DEVICE% shell settings put global transition_animation_scale 0
+          adb -s %DEVICE% shell settings put global animator_duration_scale 0
+
+          echo ===============================
+          echo Emulator is ready for tests
+          echo ===============================
+
 
       - name: Start Appium Server
         shell: cmd
