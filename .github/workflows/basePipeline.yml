@@ -137,6 +137,35 @@ jobs:
               exit 1
           }
 
+      - name: Wait for Android Emulator to be fully ready
+        shell: powershell
+        run: |
+          Write-Host "Waiting for Android boot to complete..."
+
+          for ($i = 0; $i -lt 90; $i++) {
+              $boot = adb shell getprop sys.boot_completed 2>$null
+              if ($boot -eq "1") {
+                  Write-Host "sys.boot_completed=1"
+                  break
+              }
+              Start-Sleep -Seconds 2
+          }
+
+          Write-Host "Waiting for launcher..."
+          for ($i = 0; $i -lt 60; $i++) {
+              $pkg = adb shell pm list packages 2>$null
+              if ($pkg) {
+                 Write-Host "Package manager is ready"
+                 break
+              }
+            Start-Sleep -Seconds 2
+          }
+
+          Write-Host "Unlocking screen..."
+          adb shell input keyevent 82
+
+          Write-Host "Emulator is FULLY READY"
+
       - name: Verify device and Appium readiness
         shell: powershell
         run: |
