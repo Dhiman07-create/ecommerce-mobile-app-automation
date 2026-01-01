@@ -50,6 +50,25 @@ jobs:
       - name: Start Android Emulator
         shell: cmd
         run: |
+          set DEVICE=emulator-5554
+          echo Waiting for device to appear...
+          adb -s %DEVICE% wait-for-device
+          echo Waiting for Android to fully boot...
+          set BOOTED=false
+          for /L %%i in (1,1,72) do (
+            adb -s %DEVICE% shell getprop sys.boot_completed > boot.txt
+            findstr "1" boot.txt >nul && set BOOTED=true && goto booted
+            timeout /t 5 >nul
+          )
+  
+          if "%BOOTED%"=="false" (
+            echo Emulator failed to boot in time
+            exit /b 1
+          )
+  
+          :booted
+          echo Emulator booted successfully
+  
           echo Starting emulator...
           start "" emulator -avd opencart_emulator -no-window -no-audio -gpu swiftshader_indirect
           echo Waiting for device...
