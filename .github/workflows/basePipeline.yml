@@ -55,6 +55,8 @@ jobs:
           echo Waiting for device...
           adb wait-for-device
           echo Waiting for boot completion...
+          adb kill-server
+          adb start-server
           for /L %%i in (1,1,60) do (
             adb shell getprop sys.boot_completed | findstr "1" >nul && goto booted
             timeout /t 5 >nul
