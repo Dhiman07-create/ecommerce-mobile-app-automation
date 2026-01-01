@@ -5,10 +5,10 @@
                              https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 <modelVersion>4.0.0</modelVersion>
-<groupId>com.bagisto</groupId>
+<groupId>com.opencart</groupId>
 <artifactId>ecommerce-mobile-app-automation</artifactId>
 <version>1.0</version>
-<name>Bagisto Mobile Appium Automation</name>
+<name>Opencart Mobile Appium Automation</name>
 
 <!-- ===================== -->
 <!--  GLOBAL PROPERTIES    -->
