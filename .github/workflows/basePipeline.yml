@@ -137,8 +137,8 @@ jobs:
               exit 1
           }
 
-      - name: Verify Emulator and Appium
-        shell: powershell -NoProfile
+      - name: Verify device and Appium readiness
+        shell: powershell
         run: |
           Write-Host "Checking connected devices..."
           adb devices
@@ -146,7 +146,7 @@ jobs:
           Write-Host "Waiting for Appium..."
 
           $ready = $false
-          for ($i=0; $i -lt 30; $i++) {   # 60 seconds max
+          for ($i = 0; $i -lt 30; $i++) {   # 30 * 2 = 60 seconds
               try {
                   $resp = Invoke-RestMethod `
                     -Uri "http://127.0.0.1:4723/wd/hub/status" `
