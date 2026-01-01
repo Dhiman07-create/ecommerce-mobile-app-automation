@@ -49,59 +49,39 @@ jobs:
 
       - name: Start Android Emulator
         shell: powershell
+        env:
+          ANDROID_HOME: C:\Users\Dhiman Dasgupta\AppData\Local\Android\Sdk
         run: |
-          Write-Host "==============================="
-          Write-Host "Killing existing emulators"
-          Write-Host "==============================="
-          adb kill-server
-          adb start-server
-          adb devices | Select-String "emulator" | ForEach-Object {
-              $device = ($_ -split "\s+")[0]
-              adb -s $device emu kill
-          }
-          Write-Host "==============================="
-          Write-Host "Starting Emulator in background"
-          Write-Host "==============================="
-          Start-Process emulator `
-            -ArgumentList "-avd opencart_emulator -no-window -no-audio -gpu swiftshader_indirect" `
-            -NoNewWindow
-          $DEVICE = "emulator-5554"
-          Write-Host "Waiting for device to appear..."
-          adb -s $DEVICE wait-for-device
+          Write-Host "ANDROID_HOME=$env:ANDROID_HOME"
 
-          Write-Host "Waiting for Android boot completion..."
-          $booted=$false
+          $emulator = "$env:ANDROID_HOME\emulator\emulator.exe"
+          $adb = "$env:ANDROID_HOME\platform-tools\adb.exe"
 
-          for ($i=0; $i -lt 72; $i++) {   # 72 × 5s = 6 minutes
-              $boot = adb -s $DEVICE shell getprop sys.boot_completed 2>$null
-              if ($boot -match "1") {
-                $booted=$true
-                break
-              }
-          Start-Sleep -Seconds 5
-          }
-
-          if (-not $booted) {
-              Write-Error "Boot property not set"
+          if (!(Test-Path $emulator)) {
+              Write-Error "Emulator binary not found"
               exit 1
           }
 
-          Write-Host "Waiting for Package Manager..."
-          for ($i=0; $i -lt 36; $i++) {
-              adb -s $DEVICE shell pm list packages >$null 2>&1
-              if ($LASTEXITCODE -eq 0) {
-                Write-Host "Package manager ready"
-                break
-          }
-          Start-Sleep -Seconds 5
+          if (!(Test-Path $adb)) {
+              Write-Error "ADB binary not found"
+              exit 1
           }
 
-          Write-Host "Disabling animations..."
-          adb -s $DEVICE shell settings put global window_animation_scale 0
-          adb -s $DEVICE shell settings put global transition_animation_scale 0
-          adb -s $DEVICE shell settings put global animator_duration_scale 0
+          Write-Host "Available AVDs:"
+          & $emulator -list-avds
 
-          Write-Host "Emulator fully ready"
+          Write-Host "Restarting ADB..."
+          & $adb kill-server
+          Start-Sleep -Seconds 2
+          & $adb start-server
+
+          Write-Host "Starting emulator in background..."
+          Start-Process `
+            -FilePath $emulator `
+            -ArgumentList "-avd opencart_emulator -port 5554 -no-window -no-audio -gpu swiftshader_indirect -no-snapshot" `
+            -NoNewWindow
+
+          Write-Host "Emulator process launched"
 
       - name: Start Appium Server
         shell: powershell
