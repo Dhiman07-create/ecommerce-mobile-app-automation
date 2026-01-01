@@ -137,11 +137,35 @@ jobs:
               exit 1
           }
 
-      - name: Verify Appium & Device
-        shell: powershell
+      - name: Verify Emulator and Appium
+        shell: powershell -NoProfile
         run: |
+          Write-Host "Checking connected devices..."
           adb devices
-          curl http://127.0.0.1:4723/wd/hub/status
+
+          Write-Host "Waiting for Appium..."
+
+          $ready = $false
+          for ($i=0; $i -lt 30; $i++) {   # 60 seconds max
+              try {
+                  $resp = Invoke-RestMethod `
+                    -Uri "http://127.0.0.1:4723/wd/hub/status" `
+                    -TimeoutSec 2
+
+                  if ($resp.value.ready -eq $true) {
+                      Write-Host "Appium is READY"
+                      $ready = $true
+                      break
+                  }
+              } catch {
+                  Start-Sleep -Seconds 2
+              }
+          }
+
+          if (-not $ready) {
+              Write-Error "Appium is NOT reachable"
+              exit 1
+          }
 
       - name: Run Tests
         shell: cmd
