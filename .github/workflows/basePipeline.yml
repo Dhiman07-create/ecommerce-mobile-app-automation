@@ -114,27 +114,34 @@ jobs:
 
           Write-Host "Waiting for Appium to be ready..."
 
-          $appiumReady = $false
+          $ready = $false
 
-          for ($i=0; $i -lt 30; $i++) {   # 30 × 2s = 60s max
+          for ($i=0; $i -lt 30; $i++) {   # max 60 seconds
               try {
-                  $res = Invoke-WebRequest `
-                    -Uri http://127.0.0.1:4723/wd/hub/status `
+                  $response = Invoke-RestMethod `
+                    -Uri "http://127.0.0.1:4723/wd/hub/status" `
                     -TimeoutSec 2
-                  if ($res.StatusCode -eq 200) {
-                      $appiumReady = $true
+
+                  if ($response.value.ready -eq $true) {
+                      Write-Host "Appium is READY"
+                      $ready = $true
                       break
                   }
-              } catch {}
-              Start-Sleep -Seconds 2
+              } catch {
+                  Start-Sleep -Seconds 2
+              }
           }
 
-          if (-not $appiumReady) {
+          if (-not $ready) {
               Write-Error "Appium failed to start"
               exit 1
           }
 
-          Write-Host "Appium is ready"
+      - name: Verify Appium & Device
+        shell: powershell
+        run: |
+          adb devices
+          curl http://127.0.0.1:4723/wd/hub/status
 
       - name: Run Tests
         shell: cmd
