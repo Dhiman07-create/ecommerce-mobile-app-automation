@@ -139,11 +139,41 @@ jobs:
 
       - name: Wait for Android Emulator to be fully ready
         shell: powershell
+        env:
+          UDID: emulator-5554
         run: |
-          Write-Host "Waiting for Android boot to complete..."
+          Write-Host "Starting ADB server..."
+          adb start-server | Out-Null
 
+          Write-Host "Waiting for emulator to appear in adb devices..."
+          for ($i = 0; $i -lt 60; $i++) {
+              $devices = adb devices | Select-String "$env:UDID"
+              if ($devices) {
+                  Write-Host "Emulator detected: $env:UDID"
+                  break
+              }
+              Start-Sleep -Seconds 2
+          }
+
+          if (-not $devices) {
+              Write-Error "Emulator never appeared in adb devices"
+              exit 1
+          }
+
+          Write-Host "Waiting for adb shell to respond..."
+          for ($i = 0; $i -lt 60; $i++) {
+              try {
+                  adb -s $env:UDID shell echo "ping" | Out-Null
+                  Write-Host "adb shell is responsive"
+                  break
+              } catch {
+                  Start-Sleep -Seconds 2
+              }
+          }
+
+          Write-Host "Waiting for Android boot to complete..."
           for ($i = 0; $i -lt 90; $i++) {
-              $boot = adb shell getprop sys.boot_completed 2>$null
+              $boot = adb -s $env:UDID shell getprop sys.boot_completed 2>$null
               if ($boot -eq "1") {
                   Write-Host "sys.boot_completed=1"
                   break
@@ -151,20 +181,10 @@ jobs:
               Start-Sleep -Seconds 2
           }
 
-          Write-Host "Waiting for launcher..."
-          for ($i = 0; $i -lt 60; $i++) {
-              $pkg = adb shell pm list packages 2>$null
-              if ($pkg) {
-                 Write-Host "Package manager is ready"
-                 break
-              }
-            Start-Sleep -Seconds 2
-          }
+          Write-Host "Unlocking device..."
+          adb -s $env:UDID shell input keyevent 82
 
-          Write-Host "Unlocking screen..."
-          adb shell input keyevent 82
-
-          Write-Host "Emulator is FULLY READY"
+          Write-Host "Android Emulator is FULLY READY"
 
       - name: Verify device and Appium readiness
         shell: powershell
