@@ -82,6 +82,7 @@ jobs:
             -NoNewWindow
 
           Write-Host "Emulator process launched"
+          Start-Sleep -Seconds 200
 
       - name: Start Appium Server
         shell: powershell
@@ -114,87 +115,6 @@ jobs:
 
           if (-not $ready) {
               Write-Error "Appium failed to start"
-              exit 1
-          }
-
-      - name: Wait for Android Emulator to be Ready
-        shell: powershell
-        env:
-          ANDROID_HOME: C:\Users\Dhiman Dasgupta\AppData\Local\Android\Sdk
-        run: |
-          $adb = "$env:ANDROID_HOME\platform-tools\adb.exe"
-          $deviceId = "emulator-5554"
-
-          Write-Host "Restarting ADB..."
-          & $adb kill-server
-          Start-Sleep -Seconds 2
-          & $adb start-server
-
-          Write-Host "Waiting for emulator to appear in adb devices..."
-
-          $found = $false
-          for ($i = 0; $i -lt 60; $i++) {   # 60 * 5 = 300 seconds (5 mins)
-              $devices = & $adb devices
-              Write-Host $devices
-
-              if ($devices -match $deviceId) {
-                  Write-Host "Emulator detected: $deviceId"
-                  $found = $true
-                  break
-              }
-
-              Start-Sleep -Seconds 5
-          }
-
-          if (-not $found) {
-              Write-Error "Emulator never appeared in adb devices"
-              exit 1
-          }
-
-          Write-Host "Waiting for Android boot completion..."
-
-          for ($i = 0; $i -lt 60; $i++) {   # another 5 mins
-              try {
-                  $boot = & $adb -s $deviceId shell getprop sys.boot_completed 2>$null
-                  if ($boot -eq "1") {
-                      Write-Host "Android boot completed"
-                      exit 0
-                  }
-              } catch {}
-
-              Start-Sleep -Seconds 5
-          }
-
-          Write-Error "Android emulator did not boot in time"
-          exit 1
-
-      - name: Verify device and Appium readiness
-        shell: powershell
-        run: |
-          Write-Host "Checking connected devices..."
-          adb devices
-
-          Write-Host "Waiting for Appium..."
-
-          $ready = $false
-          for ($i = 0; $i -lt 30; $i++) {   # 30 * 2 = 60 seconds
-              try {
-                  $resp = Invoke-RestMethod `
-                    -Uri "http://127.0.0.1:4723/wd/hub/status" `
-                    -TimeoutSec 2
-
-                  if ($resp.value.ready -eq $true) {
-                      Write-Host "Appium is READY"
-                      $ready = $true
-                      break
-                  }
-              } catch {
-                  Start-Sleep -Seconds 2
-              }
-          }
-
-          if (-not $ready) {
-              Write-Error "Appium is NOT reachable"
               exit 1
           }
 
