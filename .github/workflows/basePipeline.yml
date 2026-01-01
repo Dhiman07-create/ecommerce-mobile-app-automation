@@ -48,68 +48,52 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Start Android Emulator
-        shell: cmd
+        shell: powershell
         run: |
-          echo ===============================
-          echo Cleaning up existing emulators
-          echo ===============================
-
+          Write-Host "==============================="
+          Write-Host "Killing existing emulators"
+          Write-Host "==============================="
           adb kill-server
           adb start-server
-
-          for /f "tokens=1" %%i in ('adb devices ^| findstr emulator') do (
-            echo Killing emulator %%i
-            adb -s %%i emu kill
-          )
-
-          echo ===============================
-          echo Starting Android Emulator
-          echo ===============================
-
-          emulator -avd opencart_emulator -no-window -no-audio -gpu swiftshader_indirect
-
-          set DEVICE=emulator-5554
-
-          echo ===============================
-          echo Waiting for emulator device
-          echo ===============================
-
-          adb -s %DEVICE% wait-for-device
-
-          echo ===============================
-          echo Waiting for boot completion
-          echo ===============================
-
-          set BOOTED=false
-
-          REM 72 attempts * 5 seconds = 6 minutes
-          for /L %%i in (1,1,72) do (
-            adb -s %DEVICE% shell getprop sys.boot_completed > boot.txt
-            findstr "1" boot.txt >nul && set BOOTED=true && goto booted
-            timeout /t 5 >nul
-          )
-
-          if "%BOOTED%"=="false" (
-            echo Emulator failed to boot in time
-            adb devices
-            exit /b 1
-          )
-
-          :booted
-          echo Emulator booted successfully
-
-          echo ===============================
-          echo Disabling animations
-          echo ===============================
-
-          adb -s %DEVICE% shell settings put global window_animation_scale 0
-          adb -s %DEVICE% shell settings put global transition_animation_scale 0
-          adb -s %DEVICE% shell settings put global animator_duration_scale 0
-
-          echo ===============================
-          echo Emulator is ready for tests
-          echo ===============================
-
+          adb devices | Select-String "emulator" | ForEach-Object {
+              $device = ($_ -split "\s+")[0]
+              adb -s $device emu kill
+          }
+          Write-Host "==============================="
+          Write-Host "Starting Emulator in background"
+          Write-Host "==============================="
+          Start-Process emulator `
+            -ArgumentList "-avd opencart_emulator -no-window -no-audio -gpu swiftshader_indirect" `
+            -NoNewWindow
+          $DEVICE = "emulator-5554"
+          Write-Host "==============================="
+          Write-Host "Waiting for device"
+          Write-Host "==============================="
+          adb -s $DEVICE wait-for-device
+          Write-Host "==============================="
+          Write-Host "Waiting for boot completion"
+          Write-Host "==============================="
+          $booted = $false
+          for ($i=0; $i -lt 72; $i++) {
+              $status = adb -s $DEVICE shell getprop sys.boot_completed
+              if ($status -match "1") {
+                  $booted = $true
+                  break
+              }
+              Start-Sleep -Seconds 5
+          }
+          if (-not $booted) {
+              Write-Error "Emulator failed to boot"
+              adb devices
+              exit 1
+          }
+          Write-Host "==============================="
+          Write-Host "Disabling animations"
+          Write-Host "==============================="
+          adb -s $DEVICE shell settings put global window_animation_scale 0
+          adb -s $DEVICE shell settings put global transition_animation_scale 0
+          adb -s $DEVICE shell settings put global animator_duration_scale 0
+          Write-Host "Emulator is READY"
 
       - name: Start Appium Server
         shell: cmd
