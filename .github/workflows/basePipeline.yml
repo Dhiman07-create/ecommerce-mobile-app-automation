@@ -82,7 +82,7 @@ jobs:
             -NoNewWindow
 
           Write-Host "Emulator process launched"
-          Start-Sleep -Seconds 200
+          Start-Sleep -Seconds 300
 
       - name: Start Appium Server
         shell: powershell
